@@ -1,0 +1,156 @@
+---
+title: "Reporte incidencias"
+output: flexdashboard::flex_dashboard
+date: "2024-04-19"
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introducción {data-icon="fa-signal"}
+
+Este informe analiza datos de incidentes para identificar patrones y
+proporcionar información sobre áreas que requieren atención. Los datos
+incluyen incidentes de varios departamentos, detallados con
+descripciones y métricas relacionadas.
+
+```{r echo=FALSE}
+library(readxl)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(knitr)
+library(wordcloud)
+library(plotly)
+```
+
+```{r echo=FALSE}
+data <- read_excel("C:/Users/eduar/OneDrive - Red de Universidades Anáhuac/Operaciones Licenciatruas/Reportes diarios/Incidencias_AP_1713485357.xlsx")
+```
+
+### **Visualización de Incidentes por Área Afectada**
+
+```{r echo=FALSE}
+p <- ggplot(data, aes(x = `Área afectada`, fill = `Área afectada`)) +
+  geom_bar() +
+  labs(title = "Incidencias por Área Afectada", x = "Área Afectada", y = "Número de Incidencias") +
+  theme_minimal()
+
+# Convertir el gráfico de ggplot2 a plotly para interactividad
+plotly_ggplot <- ggplotly(p, tooltip = "y")
+
+# Mostrar el gráfico interactivo
+plotly_ggplot
+
+```
+
+### **Cronología de los Incidentes**
+
+Una cronología puede ayudarnos a ver tendencias a lo largo del tiempo,
+identificando potencialmente períodos con tasas altas de incidentes.
+
+```{r echo=FALSE}
+library(ggplot2)
+
+# Asegurarte de que la columna 'Fecha' está en formato de fecha
+data$Fecha <- as.Date(data$Fecha, format="%Y-%m-%d")
+
+# Crear el histograma con ggplot
+p_fecha <- ggplot(data, aes(x = Fecha)) +
+  geom_histogram(binwidth = 7, fill = "steelblue") +  # Asegúrate de que binwidth está en geom_histogram
+  labs(title = "Timeline de los Incidentes", x = "Fecha", y = "Número de Incidentes") +
+  theme_minimal()
+
+```
+
+```{r  echo=FALSE}
+library(plotly)
+
+# Convertir el gráfico de ggplot2 a plotly para interactividad
+plotly_fecha <- ggplotly(p_fecha, tooltip = "y")
+
+# Mostrar el gráfico interactivo
+plotly_fecha
+
+```
+
+# Wordscloud {data-icon="fa-cloud"}
+
+### **Análisis de Frecuencia de Palabras en las Descripciones**
+
+Una nube de palabras o un gráfico de frecuencia puede ayudar a resaltar
+temas comunes o problemas reportados en los incidentes.
+
+```{r echo=FALSE}
+# Instalar y cargar el paquete 'tm' si aún no está instalado
+if (!require("tm", quietly = TRUE)) {
+    install.packages("tm", dependencies = TRUE)
+    library(tm)
+}
+
+# Lista de stop words personalizada o utilizar la del paquete
+stop_words <- stopwords("spanish")
+stop_words <- c(stop_words, "alumno", "alumna", "estudiante", "escuela", "universidad","sé","no","acción","tema","hizo","aún","cc","enero","abril") # Agregar más palabras específicas si es necesario
+
+```
+
+```{r echo=FALSE}
+# Instalar y cargar el paquete 'tm' si aún no está instalado
+if (!require("tm", quietly = TRUE)) {
+    install.packages("tm", dependencies = TRUE)
+    library(tm)
+}
+
+# Lista de stop words personalizada o utilizar la del paquete
+stop_words <- stopwords("spanish")
+stop_words <- c(stop_words, "alumno", "alumna", "estudiante", "escuela", "universidad","sé","no","acción","tema","hizo","aún","cc","enero","abril") # Agregar más palabras específicas si es necesario
+
+
+```
+
+```{r  echo=FALSE}
+# Preprocesar y limpiar las descripciones
+data$clean_descriptions <- gsub("[\r\n]", " ", data$`Describe la incidencia`)
+data$clean_descriptions <- gsub("[^[:alpha:][:space:]]", " ", data$clean_descriptions)
+data$clean_descriptions <- tolower(data$clean_descriptions)
+data$clean_descriptions <- gsub("\\s+", " ", data$clean_descriptions)
+
+# Eliminar las stop words
+data$clean_descriptions <- sapply(strsplit(data$clean_descriptions, " "), function(words) {
+  paste(words[!tolower(words) %in% stop_words], collapse = " ")
+})
+
+# Crear la tabla de frecuencias de palabras y generar la nube de palabras
+word_freq <- table(unlist(strsplit(data$clean_descriptions, " ")))
+
+if (length(word_freq) > 0) {
+    library(wordcloud)
+    library(RColorBrewer)
+    wordcloud(names(word_freq), freq = word_freq,
+          min.freq = 2, 
+          max.words = 100, # Limitar el número de palabras
+          scale = c(3, 0.5), # Menor variación en el tamaño de las palabras
+          colors = brewer.pal(8, "Dark2"),
+          rot.per = 0.25, # Un cuarto de las palabras rotadas
+          random.order = FALSE)
+} else {
+    cat("No hay palabras suficientes para generar una nube de palabras.")
+}
+
+```
+
+### **Selección de comentarios aleatorios**
+
+```{r  echo=FALSE}
+random_comments <- sample(data$`Describe la incidencia`, 2)
+
+```
+
+```{r  echo=FALSE}
+cat("Comentario aleatorio 1:\n", random_comments[1], "\n\n")
+cat("Comentario aleatorio 2:\n", random_comments[2], "\n")
+```
